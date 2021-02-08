@@ -1,0 +1,71 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model Profile {
+  id     Int    @id @default(autoincrement())
+  name   String
+  userId Int?
+  user   User?  @relation("UserHasProfile", fields: [userId], references: [id])
+}
+
+model User {
+  id      Int      @id @default(autoincrement())
+  profile Profile? @relation("UserHasProfile")
+
+  // Friends
+  friends  User[] @relation("UserFriendsUser", references: [id])
+  friendOf User[] @relation("UserFriendsUser", references: [id])
+
+  // Posts
+  posts      Post[] @relation("UserAuthorPost")
+  likedPosts Post[] @relation("UserLikesPost")
+
+  // Comments
+  comments      Comment[] @relation("UserAuthorComment")
+  likedComments Comment[] @relation("UserLikesComment")
+
+  // Created
+  createdAt DateTime @default(now())
+
+  karmaPoints Int @default(0)
+}
+
+model Post {
+  id        Int      @id @default(autoincrement())
+  content   String
+  createdAt DateTime @default(now())
+
+  author   User @relation("UserAuthorPost", fields: [authorId], references: [id])
+  authorId Int
+
+  likedBy User[] @relation("UserLikesPost", references: [id])
+
+  comments Comment[] @relation("PostHasComment")
+}
+
+model Comment {
+  id        Int      @id @default(autoincrement())
+  content   String
+  createdAt DateTime @default(now())
+
+  post   Post? @relation("PostHasComment", fields: [postId], references: [id])
+  postId Int?
+
+  parentComment   Comment?  @relation("CommentParentsComment", fields: [parentCommentId])
+  parentCommentId Int?
+  childComments   Comment[] @relation("CommentParentsComment")
+
+  author   User @relation("UserAuthorComment", fields: [authorId], references: [id])
+  authorId Int
+
+  likedBy User[] @relation("UserLikesComment", references: [id])
+}
