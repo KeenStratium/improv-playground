@@ -13,7 +13,7 @@ generator client {
 model Account {
   id       Int    @id @default(autoincrement())
   username String
-  lastname String
+  password String
   type     String
   status   Int    @default(0)
   userId   Int?
@@ -24,31 +24,41 @@ model User {
   id            Int            @id @default(autoincrement())
   account       Account?       @relation("UserHasAccount")
   createdAt     DateTime       @default(now())
-  karmaPoints   Int            @default(0)
   SocialUpdates SocialUpdate[] @relation("UserAuthorSocialUpdate")
   PostAnalytic  PostAnalytic[]
+  profileName   String
+  avatarUrl     String
+  defaultCity   City           @relation(fields: [cityId], references: [id])
+  cityId        Int
+  favCities     City[]         @relation("UserFavCities")
+  firstName     String
+  lastName      String
+  birthdate     DateTime       @default(now())
 }
 
 model City {
-  id        Int        @id @default(autoincrement())
-  PostMeta  PostMeta[]
-  location  Json
-  createdAt DateTime   @default(now())
+  id         Int        @id @default(autoincrement())
+  name       String
+  postMeta   PostMeta[]
+  location   Json
+  createdAt  DateTime   @default(now())
+  User       User[]
+  FavByUsers User[]     @relation("UserFavCities")
 }
 
 model PostMeta {
-  id             Int          @id @default(autoincrement())
-  city           City         @relation(fields: [cityId], references: [id])
-  cityId         Int
-  location       Json
-  socialUpdate   SocialUpdate @relation(fields: [socialUpdateId], references: [id])
-  socialUpdateId Int
+  id           Int            @id @default(autoincrement())
+  city         City           @relation(fields: [cityId], references: [id])
+  cityId       Int
+  location     Json
+  SocialUpdate SocialUpdate[]
 }
 
 model SocialUpdate {
   id            Int            @id @default(autoincrement())
+  title         String
   content       String
-  User          User?          @relation("UserAuthorSocialUpdate", fields: [userId], references: [id])
+  user          User?          @relation("UserAuthorSocialUpdate", fields: [userId], references: [id])
   userId        Int?
   createdAt     DateTime       @default(now())
   state         Int            @default(0)
@@ -60,18 +70,19 @@ model SocialUpdate {
   referenceId   Int?
   viewCount     Int            @default(0)
   reactionCount Json
-  MediaUpload   MediaUpload[]
-  PostMeta      PostMeta[]
+  mediaUpload   MediaUpload    @relation(fields: [mediaUploadId], references: [id])
+  postMeta      PostMeta       @relation(fields: [postMetaId], references: [id])
   PostAnalytic  PostAnalytic[]
+  mediaUploadId Int
+  postMetaId    Int
 }
 
 model MediaUpload {
-  id             Int           @id @default(autoincrement())
-  socialUpdateId Int?
-  socialUpdate   SocialUpdate? @relation(fields: [socialUpdateId], references: [id])
-  mediaUrls      String[]
+  id           Int            @id @default(autoincrement())
+  mediaUrls    String[]
   // no usage yet - TBA
-  metadata       String
+  metadata     String
+  SocialUpdate SocialUpdate[]
 }
 
 model ValueMeta {
