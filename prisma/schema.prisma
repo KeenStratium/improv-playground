@@ -10,62 +10,81 @@ generator client {
   provider = "prisma-client-js"
 }
 
-model Profile {
-  id     Int    @id @default(autoincrement())
-  name   String
-  userId Int?
-  user   User?  @relation("UserHasProfile", fields: [userId], references: [id])
+model Account {
+  id       Int    @id @default(autoincrement())
+  username String
+  lastname String
+  type     String
+  status   Int    @default(0)
+  userId   Int?
+  user     User?  @relation("UserHasAccount", fields: [userId], references: [id])
 }
 
 model User {
-  id      Int      @id @default(autoincrement())
-  profile Profile? @relation("UserHasProfile")
-
-  // Friends
-  friends  User[] @relation("UserFriendsUser", references: [id])
-  friendOf User[] @relation("UserFriendsUser", references: [id])
-
-  // Posts
-  posts      Post[] @relation("UserAuthorPost")
-  likedPosts Post[] @relation("UserLikesPost")
-
-  // Comments
-  comments      Comment[] @relation("UserAuthorComment")
-  likedComments Comment[] @relation("UserLikesComment")
-
-  // Created
-  createdAt DateTime @default(now())
-
-  karmaPoints Int @default(0)
+  id            Int            @id @default(autoincrement())
+  account       Account?       @relation("UserHasAccount")
+  createdAt     DateTime       @default(now())
+  karmaPoints   Int            @default(0)
+  SocialUpdates SocialUpdate[] @relation("UserAuthorSocialUpdate")
+  PostAnalytic  PostAnalytic[]
 }
 
-model Post {
-  id        Int      @id @default(autoincrement())
-  content   String
-  createdAt DateTime @default(now())
-
-  author   User @relation("UserAuthorPost", fields: [authorId], references: [id])
-  authorId Int
-
-  likedBy User[] @relation("UserLikesPost", references: [id])
-
-  comments Comment[] @relation("PostHasComment")
+model City {
+  id        Int        @id @default(autoincrement())
+  PostMeta  PostMeta[]
+  location  Json
+  createdAt DateTime   @default(now())
 }
 
-model Comment {
-  id        Int      @id @default(autoincrement())
-  content   String
-  createdAt DateTime @default(now())
+model PostMeta {
+  id             Int          @id @default(autoincrement())
+  city           City         @relation(fields: [cityId], references: [id])
+  cityId         Int
+  location       Json
+  socialUpdate   SocialUpdate @relation(fields: [socialUpdateId], references: [id])
+  socialUpdateId Int
+}
 
-  post   Post? @relation("PostHasComment", fields: [postId], references: [id])
-  postId Int?
+model SocialUpdate {
+  id            Int            @id @default(autoincrement())
+  content       String
+  User          User?          @relation("UserAuthorSocialUpdate", fields: [userId], references: [id])
+  userId        Int?
+  createdAt     DateTime       @default(now())
+  state         Int            @default(0)
+  type          String
+  socialType    String
+  // reference acts as "Update to" is social type is "post", otherwise it act as "Parent to" if type is "comment"
+  reference     SocialUpdate?  @relation("SocialUpdateReference", fields: [referenceId], references: [id])
+  referencedBy  SocialUpdate[] @relation("SocialUpdateReference")
+  referenceId   Int?
+  viewCount     Int            @default(0)
+  reactionCount Json
+  MediaUpload   MediaUpload[]
+  PostMeta      PostMeta[]
+  PostAnalytic  PostAnalytic[]
+}
 
-  parentComment   Comment?  @relation("CommentParentsComment", fields: [parentCommentId])
-  parentCommentId Int?
-  childComments   Comment[] @relation("CommentParentsComment")
+model MediaUpload {
+  id             Int           @id @default(autoincrement())
+  socialUpdateId Int?
+  socialUpdate   SocialUpdate? @relation(fields: [socialUpdateId], references: [id])
+  mediaUrls      String[]
+  // no usage yet - TBA
+  metadata       String
+}
 
-  author   User @relation("UserAuthorComment", fields: [authorId], references: [id])
-  authorId Int
+model ValueMeta {
+  id    String @id
+  value String
+}
 
-  likedBy User[] @relation("UserLikesComment", references: [id])
+model PostAnalytic {
+  id             Int          @id @default(autoincrement())
+  type           String
+  socialUpdate   SocialUpdate @relation(fields: [socialUpdateId], references: [id])
+  socialUpdateId Int
+  value          String
+  user           User         @relation(fields: [userId], references: [id])
+  userId         Int
 }
