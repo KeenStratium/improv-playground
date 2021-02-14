@@ -1,7 +1,6 @@
 import { PrismaClient } from "@prisma/client"
 import { ApolloServer } from 'apollo-server'
 import casual = require('casual')
-import { POINT_CONVERSION_COMPRESSED } from "constants";
 
 const prisma = new PrismaClient();
 const avatarUrls = [
