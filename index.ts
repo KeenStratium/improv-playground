@@ -97,6 +97,7 @@ const typeDefs = `#graphql
     reactionCount: String
     mediaUpload:   MediaUpload
     Post:          Post
+    childComments: [Comment]
   }
 
   type User {
