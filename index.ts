@@ -53,15 +53,14 @@ const typeDefs = `#graphql
   }
 
   type PostMeta {
-    id:             Int
-    city:           City
-    post:   SocialUpdate
+    id:           Int    
+    post:         Post
   }
 
-  type SocialUpdate {
+  type Post {
     id:            Int
-    title:         String
     content:       String
+    title:         String
     user:          User
     userId:        Int
     createdAt:     String
@@ -71,27 +70,40 @@ const typeDefs = `#graphql
     - 'active'
     - 'draft'
     """
-    state:         Int
-    "Returns a report type such as 'Lighting Issues', 'Road Development Work', etc..." 
-    type:          String
+    state:         Int    
     "Either 'post' or 'comment'"
     socialType:    String
     "reference acts as 'Update to' is social type is 'post', otherwise it act as 'Parent to' if type is 'comment'"
-    reference:     SocialUpdate
-    referencedBy:  [SocialUpdate]
-    viewCount:     Int
+    reference:     Post
+    referencedBy:  [Post]  
     reactionCount: String
     mediaUpload:   MediaUpload
     "Only has value when 'socialType' == 'post'"
     postMeta:      PostMeta
-    PostAnalytic:  [PostAnalytic]
+    postAnalytic:  [PostAnalytic]    
+    viewCount:     Int
+    "Returns a report type such as 'Lighting Issues', 'Road Development Work', etc..." 
+    type:          String
+    city:          City
+    comment:       [Comment]
+  }
+
+  type Comment {
+    id:            Int
+    content:       String
+    user:          User
+    createdAt:     String
+    state:         Int
+    reactionCount: String
+    mediaUpload:   MediaUpload
+    Post:          Post
   }
 
   type User {
     id:            Int
     createdAt:     String
-    SocialUpdates: [SocialUpdate]
-    PostAnalytic:  [PostAnalytic]
+    posts: [Post]
+    postAnalytic:  [PostAnalytic]
     profileName:   String
     avatarUrl:     String
     defaultCity:   City
@@ -102,8 +114,8 @@ const typeDefs = `#graphql
 
   type MediaUpload {
     id:             Int
-    socialUpdateId: Int
-    socialUpdate:   SocialUpdate
+    postId: Int
+    post:   Post
     mediaUrls:      [String]
     "no usage yet - TBA"
     metadata:       String
@@ -112,8 +124,8 @@ const typeDefs = `#graphql
   type PostAnalytic {
     id:             Int
     type:           String
-    socialUpdate:   SocialUpdate
-    socialUpdateId: Int
+    post:           Post
+    postId:         Int
     value:          String
     user:           User
     userId:         Int
@@ -133,7 +145,7 @@ const typeDefs = `#graphql
 
   type Query {
     allUsers: [User!]!,
-    allPosts: [SocialUpdate!]!
+    allPosts: [Post!]!
   }`;
 
 
@@ -167,7 +179,7 @@ function getRandomUrls() {
 const resolvers = {
   Query: {
     allPosts: () => {
-      return prisma.socialUpdate.findMany({});
+      return prisma.post.findMany({});
     },
     allUsers: () => {
       return prisma.user.findMany({});
@@ -184,18 +196,18 @@ const mocks = {
     lastName: casual.last_name,
     createdAt: casual.date('YYYY-MM-DDTHH:mm:ss.SSSZZ')
   }),
-  SocialUpdate: () => ({
+  Post: () => ({
     id: casual.integer(1, 100),
-    title: casual.title,
     content: casual.sentences(casual.integer(1, 3)),
     createdAt: casual.date('YYYY-MM-DDTHH:mm:ss.SSSZZ'),
     state: 1,
-    type: casual.random_element(sampleReportTypes),
     socialType: 'post',
-    viewCount: casual.integer(0, 1000),
     reactionCount: JSON.stringify({
       like: casual.integer(0, 100)
     }),
+    title: casual.title,
+    type: casual.random_element(sampleReportTypes),
+    viewCount: casual.integer(0, 1000),
   }),
   MediaUpload: () => ({
     id: casual.integer(1, 100),
@@ -206,9 +218,15 @@ const mocks = {
     name: casual.city,
     createdAt: casual.date('YYYY-MM-DDTHH:mm:ss.SSSZZ')
   }),
-  PostMeta: () => ({
+  Comment: () => ({
     id: casual.integer(1, 100),
-  })
+    content: casual.sentences(casual.integer(1, 3)),
+    createdAt: casual.date('YYYY-MM-DDTHH:mm:ss.SSSZZ'),
+    state: 1,
+    reactionCount: JSON.stringify({
+      like: casual.integer(0, 100)
+    }),
+  }),
 }
 
 const server = new ApolloServer({

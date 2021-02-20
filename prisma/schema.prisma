@@ -21,68 +21,77 @@ model Account {
 }
 
 model User {
-  id            Int            @id @default(autoincrement())
-  account       Account?       @relation("UserHasAccount")
-  createdAt     DateTime       @default(now())
-  SocialUpdates SocialUpdate[] @relation("UserAuthorSocialUpdate")
-  PostAnalytic  PostAnalytic[]
-  profileName   String
-  avatarUrl     String
-  defaultCity   City           @relation(fields: [cityId], references: [id])
-  cityId        Int
-  favCities     City[]         @relation("UserFavCities")
-  firstName     String
-  lastName      String
-  birthdate     DateTime       @default(now())
+  id           Int            @id @default(autoincrement())
+  account      Account?       @relation("UserHasAccount")
+  createdAt    DateTime       @default(now())
+  post         Post[]         @relation("UserAuthorPost")
+  postAnalytic PostAnalytic[]
+  profileName  String
+  avatarUrl    String
+  defaultCity  City           @relation(fields: [cityId], references: [id])
+  cityId       Int
+  favCities    City[]         @relation("UserFavCities")
+  firstName    String
+  lastName     String
+  birthdate    DateTime       @default(now())
+  Comment      Comment[]      @relation("UserAuthorComment")
 }
 
 model City {
-  id         Int        @id @default(autoincrement())
+  id         Int      @id @default(autoincrement())
   name       String
-  postMeta   PostMeta[]
   location   Json
-  createdAt  DateTime   @default(now())
-  User       User[]
-  FavByUsers User[]     @relation("UserFavCities")
+  createdAt  DateTime @default(now())
+  user       User[]
+  favByUsers User[]   @relation("UserFavCities")
+  posts      Post[]
 }
 
-model PostMeta {
-  id           Int            @id @default(autoincrement())
-  city         City           @relation(fields: [cityId], references: [id])
-  cityId       Int
-  location     Json
-  SocialUpdate SocialUpdate[]
-}
-
-model SocialUpdate {
+model Post {
   id            Int            @id @default(autoincrement())
   title         String
   content       String
-  user          User?          @relation("UserAuthorSocialUpdate", fields: [userId], references: [id])
+  user          User?          @relation("UserAuthorPost", fields: [userId], references: [id])
   userId        Int?
   createdAt     DateTime       @default(now())
   state         Int            @default(0)
-  type          String
-  socialType    String
   // reference acts as "Update to" is social type is "post", otherwise it act as "Parent to" if type is "comment"
-  reference     SocialUpdate?  @relation("SocialUpdateReference", fields: [referenceId], references: [id])
-  referencedBy  SocialUpdate[] @relation("SocialUpdateReference")
+  reference     Post?          @relation("PostReference", fields: [referenceId], references: [id])
+  referencedBy  Post[]         @relation("PostReference")
   referenceId   Int?
-  viewCount     Int            @default(0)
   reactionCount Json
   mediaUpload   MediaUpload    @relation(fields: [mediaUploadId], references: [id])
-  postMeta      PostMeta       @relation(fields: [postMetaId], references: [id])
-  PostAnalytic  PostAnalytic[]
+  postAnalytic  PostAnalytic[]
   mediaUploadId Int
-  postMetaId    Int
+  viewCount     Int            @default(0)
+  type          String
+  city          City           @relation(fields: [cityId], references: [id])
+  cityId        Int
+  location      Json
+  comments      Comment[]
+}
+
+model Comment {
+  id            Int         @id @default(autoincrement())
+  content       String
+  user          User?       @relation("UserAuthorComment", fields: [userId], references: [id])
+  userId        Int?
+  createdAt     DateTime    @default(now())
+  state         Int         @default(0)
+  reactionCount Json
+  mediaUpload   MediaUpload @relation(fields: [mediaUploadId], references: [id])
+  mediaUploadId Int
+  Post          Post?       @relation(fields: [postId], references: [id])
+  postId        Int?
 }
 
 model MediaUpload {
-  id           Int            @id @default(autoincrement())
-  mediaUrls    String[]
+  id        Int       @id @default(autoincrement())
+  mediaUrls String[]
   // no usage yet - TBA
-  metadata     String
-  SocialUpdate SocialUpdate[]
+  metadata  String
+  post      Post[]
+  Comment   Comment[]
 }
 
 model ValueMeta {
@@ -91,11 +100,11 @@ model ValueMeta {
 }
 
 model PostAnalytic {
-  id             Int          @id @default(autoincrement())
-  type           String
-  socialUpdate   SocialUpdate @relation(fields: [socialUpdateId], references: [id])
-  socialUpdateId Int
-  value          String
-  user           User         @relation(fields: [userId], references: [id])
-  userId         Int
+  id     Int    @id @default(autoincrement())
+  type   String
+  post   Post   @relation(fields: [postId], references: [id])
+  postId Int
+  value  String
+  user   User   @relation(fields: [userId], references: [id])
+  userId Int
 }
