@@ -66,9 +66,9 @@ const typeDefs = `#graphql
     createdAt:     String
     """
     One of the f.f.:
-    - 'archived'
-    - 'active'
-    - 'draft'
+    - '-1: archived'
+    - '1: active'
+    - '0: draft'
     """
     state:         Int    
     "Either 'post' or 'comment'"
@@ -101,12 +101,13 @@ const typeDefs = `#graphql
     createdAt:     String
     posts: [Post]
     postAnalytic:  [PostAnalytic]
-    profileName:   String
     avatarUrl:     String
     defaultCity:   City
     firstName:     String
     lastName:      String
     birthdate:     String
+    isAnonymous:   Boolean
+    displayName:   String
   }
 
   type MediaUpload {
@@ -187,7 +188,7 @@ const resolvers = {
 const mocks = {
   User: () => ({
     id: casual.integer(1, 100),
-    profileName: casual.name,
+    displayName: casual.name,
     avatarUrl: casual.random_element(avatarUrls),
     firstName: casual.first_name,
     lastName: casual.last_name,

@@ -26,7 +26,6 @@ model User {
   createdAt    DateTime       @default(now())
   post         Post[]         @relation("UserAuthorPost")
   postAnalytic PostAnalytic[]
-  profileName  String
   avatarUrl    String
   defaultCity  City           @relation(fields: [cityId], references: [id])
   cityId       Int
@@ -35,6 +34,8 @@ model User {
   lastName     String
   birthdate    DateTime       @default(now())
   Comment      Comment[]      @relation("UserAuthorComment")
+  isAnonymous  Boolean        @default(true)
+  displayName  String
 }
 
 model City {
