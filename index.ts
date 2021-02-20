@@ -72,14 +72,10 @@ const typeDefs = `#graphql
     """
     state:         Int    
     "Either 'post' or 'comment'"
-    socialType:    String
-    "reference acts as 'Update to' is social type is 'post', otherwise it act as 'Parent to' if type is 'comment'"
     reference:     Post
     referencedBy:  [Post]  
     reactionCount: String
     mediaUpload:   MediaUpload
-    "Only has value when 'socialType' == 'post'"
-    postMeta:      PostMeta
     postAnalytic:  [PostAnalytic]    
     viewCount:     Int
     "Returns a report type such as 'Lighting Issues', 'Road Development Work', etc..." 
@@ -202,7 +198,6 @@ const mocks = {
     content: casual.sentences(casual.integer(1, 3)),
     createdAt: casual.date('YYYY-MM-DDTHH:mm:ss.SSSZZ'),
     state: 1,
-    socialType: 'post',
     reactionCount: JSON.stringify({
       like: casual.integer(0, 100)
     }),
