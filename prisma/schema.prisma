@@ -7,7 +7,8 @@ datasource db {
 }
 
 generator client {
-  provider = "prisma-client-js"
+  provider        = "prisma-client-js"
+  previewFeatures = ["createMany"]
 }
 
 model Account {
@@ -30,8 +31,8 @@ model User {
   defaultCity  City           @relation(fields: [cityId], references: [id])
   cityId       Int
   favCities    City[]         @relation("UserFavCities")
-  firstName    String
-  lastName     String
+  firstName    String?
+  lastName     String?
   birthdate    DateTime       @default(now())
   Comment      Comment[]      @relation("UserAuthorComment")
   isAnonymous  Boolean        @default(true)
@@ -41,7 +42,7 @@ model User {
 model City {
   id         Int      @id @default(autoincrement())
   name       String
-  location   Json
+  location   Json?
   createdAt  DateTime @default(now())
   user       User[]
   favByUsers User[]   @relation("UserFavCities")
@@ -61,39 +62,40 @@ model Post {
   referencedBy  Post[]         @relation("PostReference")
   referenceId   Int?
   reactionCount Json
-  mediaUpload   MediaUpload    @relation(fields: [mediaUploadId], references: [id])
+  mediaUpload   MediaUpload?   @relation(fields: [mediaUploadId], references: [id])
+  mediaUploadId Int?
   postAnalytic  PostAnalytic[]
-  mediaUploadId Int
   viewCount     Int            @default(0)
-  type          String
+  type          ValueMeta?     @relation(fields: [typeId], references: [id])
+  typeId        String?
   city          City           @relation(fields: [cityId], references: [id])
   cityId        Int
-  location      Json
+  location      Json?
   comments      Comment[]
 }
 
 model Comment {
-  id            Int         @id @default(autoincrement())
-  content       String
-  user          User?       @relation("UserAuthorComment", fields: [userId], references: [id])
-  userId        Int?
-  createdAt     DateTime    @default(now())
-  state         Int         @default(0)
-  reactionCount Json
-  mediaUpload   MediaUpload @relation(fields: [mediaUploadId], references: [id])
-  mediaUploadId Int
-  Post          Post?       @relation(fields: [postId], references: [id])
-  postId        Int?
-  childComments Comment[]   @relation("CommentToComment")
-  parentComment Comment?    @relation("CommentToComment", fields: [commentId], references: [id])
-  commentId     Int?
+  id              Int          @id @default(autoincrement())
+  content         String
+  user            User?        @relation("UserAuthorComment", fields: [userId], references: [id])
+  userId          Int?
+  createdAt       DateTime     @default(now())
+  state           Int          @default(0)
+  reactionCount   Json
+  mediaUpload     MediaUpload? @relation(fields: [mediaUploadId], references: [id])
+  mediaUploadId   Int?
+  Post            Post?        @relation(fields: [postId], references: [id])
+  postId          Int?
+  childComments   Comment[]    @relation("CommentToComment")
+  parentComment   Comment?     @relation("CommentToComment", fields: [parentCommentId], references: [id])
+  parentCommentId Int?
 }
 
 model MediaUpload {
   id        Int       @id @default(autoincrement())
   mediaUrls String[]
   // no usage yet - TBA
-  metadata  String
+  metadata  String?
   post      Post[]
   Comment   Comment[]
 }
@@ -101,6 +103,7 @@ model MediaUpload {
 model ValueMeta {
   id    String @id
   value String
+  Post  Post[]
 }
 
 model PostAnalytic {
