@@ -1,5 +1,4 @@
 import { PrismaClient } from '@prisma/client'
-import { random } from 'casual'
 import faker = require('faker')
 const prisma = new PrismaClient()
 
