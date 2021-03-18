@@ -46,6 +46,7 @@ async function main() {
             username: 'improv',
             password: 'improv123',
             type: 'Citizen',
+            emailAddress: faker.internet.email(),
             user: {
                 create: {
                     avatarUrl: 'https://images-na.ssl-images-amazon.com/images/M/MV5BNTczMzk1MjU1MV5BMl5BanBnXkFtZTcwNDk2MzAyMg@@._V1_UY256_CR2,0,172,256_AL_.jpg',
@@ -64,6 +65,7 @@ async function main() {
             username: 'john',
             password: 'john123',
             type: 'Citizen',
+            emailAddress: faker.internet.email(),
             user: {
                 create: {
                     avatarUrl: 'https://images.pexels.com/photos/1681010/pexels-photo-1681010.jpeg?auto=compress&cs=tinysrgb&crop=faces&fit=crop&h=200&w=200',
@@ -270,8 +272,6 @@ async function main() {
             }
         ]
     })
-
-    console.log({ cities, improvAcc, johnAcc, reportValues, statusValues, mediaUploads, posts, comments })
 }
 
 function getRandomUrls() {

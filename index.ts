@@ -40,7 +40,7 @@ const typeDefs = `#graphql
     - '0: draft'
     """
     state:         Int    
-    "Either 'post' or 'comment'"
+    "Either 'Post' or 'Comment'"
     reference:     Post
     referencedBy:  [Post]  
     reactionCount: String
@@ -68,7 +68,7 @@ const typeDefs = `#graphql
   type User {
     id:            Int
     createdAt:     String
-    posts: [Post]
+    posts:         [Post]
     postAnalytic:  [PostAnalytic]
     avatarUrl:     String
     defaultCity:   City
