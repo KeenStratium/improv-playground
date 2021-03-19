@@ -12,6 +12,14 @@ const typeDefs = `#graphql
     karmaPoints: Int
   }
 
+  input PostCreateInput {
+    userId: Int,
+    title: String!,
+    content: String!,
+    cityId: Int!,
+    type: String
+  }
+
   type City {
     id:         Int
     postMeta:   [PostMeta]
@@ -50,7 +58,8 @@ const typeDefs = `#graphql
     "Returns a report type such as 'Lighting Issues', 'Road Development Work', etc..." 
     type:          String
     city:          City
-    comment:       [Comment]
+    cityId:        Int
+    comments:      [Comment]
   }
 
   type Comment {
@@ -61,7 +70,8 @@ const typeDefs = `#graphql
     state:         Int
     reactionCount: String
     mediaUpload:   MediaUpload
-    Post:          Post
+    post:          Post
+    parentComment: Comment
     childComments: [Comment]
   }
 
@@ -98,33 +108,148 @@ const typeDefs = `#graphql
     userId:         Int
   }
 
-  # type Mutation {
-  #   createProfile(
-  #     userId: Int
-  #     name: String
-  #   ): Profile!
+  type ValueMeta {
+    id:        String
+    value:     String
+  }
+
+  type Mutation {
+    # createProfile(
+    #   userId: Int
+    #   name: String
+    # ): Profile!
     
-  #   createUser(
-  #     karmaPoints: Int
-  #     profile: ProfileCreateInput
-  #   ): User!
-  # }
+    # createUser(
+    #   karmaPoints: Int
+    #   profile: ProfileCreateInput
+    # ): User!
+
+    createPost(
+      userId: Int,
+      title: String!,
+      content: String!,
+      cityId: Int!,
+      type: String
+    ) : Post!
+    createComment(
+      content: String!,
+      userId: Int!,
+      postId: Int,
+      commentId: Int
+    ): Comment!
+  }
 
   type Query {
     allUsers: [User!]!,
-    allPosts: [Post!]!
-  }`;
+    allPosts: [Post!]!,
+    options: [ValueMeta!]!
+  }
+
+  type AuthPayload {
+    hello: String!
+  }
+`;
 
 
 const resolvers = {
   Query: {
     allPosts: () => {
-      return prisma.post.findMany({});
+      return prisma.post.findMany({
+        include: {
+          user: true,
+          comments: {
+            include: {
+              childComments: {
+                include: {
+                  childComments: true
+                }
+              }
+            }
+          }
+        }
+      });
     },
     allUsers: () => {
       return prisma.user.findMany({});
+    },
+    options: () => {
+      return prisma.valueMeta.findMany({})
     }
   },
+  Mutation: {
+    createPost: (parent: any, args: any, ctx: any, info: any) => {
+      return ctx.prisma.post.create({
+        data: {
+          user: {
+            connect: {
+              id: args.userId
+            }
+          },
+          title: args.title,
+          content: args.content,
+          state: 1,
+          reactionCount: {
+            like: 0
+          },
+          type: {
+            connect: {
+              id: args.type
+            }
+          },
+          city: {
+            connect: {
+              id: args.cityId
+            }
+          },
+        }
+      })
+    },
+    createComment: (parent: any, args: any, ctx: any, info: any) => {
+      let data = {}
+
+      if ('postId' in args) {
+        data = {
+          user: {
+            connect: {
+              id: args.userId
+            }
+          },
+          content: args.content,
+          state: 1,
+          reactionCount: {
+            like: 0
+          },
+          post: {
+            connect: {
+              id: args.postId
+            }
+          },
+        }
+      } else if ('commentId') {
+        data = {
+          user: {
+            connect: {
+              id: args.userId
+            }
+          },
+          content: args.content,
+          state: 1,
+          reactionCount: {
+            like: 0
+          },
+          parentComment: {
+            connect: {
+              id: 'commentId' in args ? args.commentId : undefined
+            }
+          }
+        }
+      }
+
+      return ctx.prisma.comment.create({
+        data
+      })
+    }
+  }
 };
 
 const server = new ApolloServer({

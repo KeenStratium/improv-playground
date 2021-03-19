@@ -234,24 +234,24 @@ async function main() {
                 state: 1,
                 reactionCount: getReactionCount(),
                 mediaUploadId: 4,
-                postId: 2,
-                parentCommentId: 3
+                parentCommentId: 3,
+                postId: undefined
             },
             {
                 userId: 1,
                 content: faker.lorem.sentences(),
                 state: 1,
                 reactionCount: getReactionCount(),
-                postId: 2,
-                parentCommentId: 3
+                parentCommentId: 3,
+                postId: undefined
             },
             {
                 userId: 2,
                 content: faker.lorem.sentences(),
                 state: 1,
                 reactionCount: getReactionCount(),
-                postId: 2,
-                parentCommentId: 5
+                parentCommentId: 5,
+                postId: undefined
             },
             {
                 userId: 1,
@@ -259,8 +259,8 @@ async function main() {
                 state: 1,
                 reactionCount: getReactionCount(),
                 mediaUploadId: 5,
-                postId: 2,
-                parentCommentId: 4
+                parentCommentId: 4,
+                postId: undefined
             },
             {
                 userId: 2,

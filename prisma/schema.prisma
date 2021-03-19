@@ -35,7 +35,7 @@ model User {
   firstName    String?
   lastName     String?
   birthdate    DateTime       @default(now())
-  Comment      Comment[]      @relation("UserAuthorComment")
+  comment      Comment[]      @relation("UserAuthorComment")
   isAnonymous  Boolean        @default(true)
   displayName  String
 }
@@ -85,7 +85,7 @@ model Comment {
   reactionCount   Json
   mediaUpload     MediaUpload? @relation(fields: [mediaUploadId], references: [id])
   mediaUploadId   Int?
-  Post            Post?        @relation(fields: [postId], references: [id])
+  post            Post?        @relation(fields: [postId], references: [id])
   postId          Int?
   childComments   Comment[]    @relation("CommentToComment")
   parentComment   Comment?     @relation("CommentToComment", fields: [parentCommentId], references: [id])
@@ -104,7 +104,7 @@ model MediaUpload {
 model ValueMeta {
   id    String @id
   value String
-  Post  Post[]
+  post  Post[]
 }
 
 model PostAnalytic {
