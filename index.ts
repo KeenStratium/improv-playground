@@ -1,9 +1,12 @@
 import { PrismaClient } from "@prisma/client"
 import { ApolloServer } from 'apollo-server'
+import { GraphQLJSON } from 'graphql-scalars';
 
 const prisma = new PrismaClient();
 
 const typeDefs = `#graphql
+  scalar JSON
+
   input ProfileCreateInput {
     name: String
   }
@@ -51,12 +54,12 @@ const typeDefs = `#graphql
     "Either 'Post' or 'Comment'"
     reference:     Post
     referencedBy:  [Post]  
-    reactionCount: String
+    reactionCount: JSON
     mediaUpload:   MediaUpload
     postAnalytic:  [PostAnalytic]    
     viewCount:     Int
     "Returns a report type such as 'Lighting Issues', 'Road Development Work', etc..." 
-    type:          String
+    type:          ValueMeta
     city:          City
     cityId:        Int
     comments:      [Comment]
@@ -152,11 +155,13 @@ const typeDefs = `#graphql
 
 
 const resolvers = {
+  JSON: GraphQLJSON,
   Query: {
     allPosts: () => {
       return prisma.post.findMany({
         include: {
           user: true,
+          type: true,
           comments: {
             include: {
               childComments: {
