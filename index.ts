@@ -376,11 +376,11 @@ const server = new ApolloServer({
   context: ({ req }) => {
     const token = req.headers.authorization || '';
 
-    const user = getAuthenticatedUser(token)
+    // const user = getAuthenticatedUser(token)
 
-    if (!user) {
-      throw new AuthenticationError('You must be logged in to perform this action.');
-    }
+    // if (!user) {
+    //   throw new AuthenticationError('You must be logged in to perform this action.');
+    // }
 
     return {
       prisma
