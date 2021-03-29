@@ -57,7 +57,7 @@ const typeDefs = `#graphql
     user:          User
     createdAt:     String
     state:         Int
-    reactionCount: String
+    reactionCount: JSON
     mediaUpload:   MediaUpload
     post:          Post
     parentComment: Comment
@@ -375,12 +375,16 @@ const server = new ApolloServer({
   typeDefs,
   context: ({ req }) => {
     const token = req.headers.authorization || '';
+    const refreshToken = req.headers["x-refresh-token"];
+    const accessToken = req.headers["x-access-token"];
 
-    // const user = getAuthenticatedUser(token)
+    if (!accessToken && !refreshToken) return { prisma };
 
-    // if (!user) {
-    //   throw new AuthenticationError('You must be logged in to perform this action.');
-    // }
+    const user = getAuthenticatedUser(token)
+
+    if (!user) {
+      throw new AuthenticationError('You must be logged in to perform this action.');
+    }
 
     return {
       prisma
