@@ -16,7 +16,7 @@ model Account {
   username     String @unique
   password     String
   emailAddress String @unique @default("")
-  type         String
+  type         String @default("Citizen")
   status       Int    @default(0)
   userId       Int?
   user         User?  @relation("UserHasAccount", fields: [userId], references: [id])

@@ -11,22 +11,6 @@ const prisma = new PrismaClient();
 const typeDefs = `#graphql
   scalar JSON
 
-  input ProfileCreateInput {
-    name: String
-  }
-
-  input UserCreateInput {
-    karmaPoints: Int
-  }
-
-  input PostCreateInput {
-    userId: Int,
-    title: String!,
-    content: String!,
-    cityId: Int!,
-    type: String
-  }
-
   type City {
     id:         Int
     postMeta:   [PostMeta]
@@ -120,43 +104,56 @@ const typeDefs = `#graphql
   }
 
   type Account {
-    username: String,
-    password: String,
-    emailAddress: String,
+    username: String
+    password: String
+    emailAddress: String
+    """
+    One of the f.f.:
+    - 'Moderator'
+    - 'Citizen'
+    """
+    type: String
+    """
+    One of the f.f.:
+    - -1: Suspended
+    - 0: Archive
+    - 1: Active
+    """
+    status: Int
     user: User
   }
 
   type Mutation {
     createPost(
-      userId: Int,
-      title: String!,
-      content: String!,
-      cityId: Int!,
+      userId: Int
+      title: String!
+      content: String!
+      cityId: Int!
       type: String
     ) : Post!
     createComment(
-      content: String!,
-      userId: Int!,
-      postId: Int,
+      content: String!
+      userId: Int!
+      postId: Int
       commentId: Int
-    ): Comment!,
+    ): Comment!
     userLogin(
-      username: String!,
+      username: String!
       password: String!
     ): AuthPayload!
   }
 
   type Query {
-    allUsers: [User!]!,
-    allPosts: [Post!]!,
-    options: [ValueMeta!]!,
-    user(id: Int!): User!,
-    post(id: Int!): Post,
+    allUsers: [User!]!
+    allPosts: [Post!]!
+    options: [ValueMeta!]!
+    user(id: Int!): User!
+    post(id: Int!): Post
     account(username: String!): Account
   }
 
   type AuthPayload {
-    user: User,
+    user: User
     token: String!
   }
 `;
