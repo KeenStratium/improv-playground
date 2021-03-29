@@ -46,8 +46,9 @@ async function main() {
         data: {
             username: 'improv',
             password: await encryptPass('improv123'),
-            type: 'Citizen',
+            type: 'Moderator',
             emailAddress: faker.internet.email(),
+            status: 1,
             user: {
                 create: {
                     avatarUrl: 'https://images-na.ssl-images-amazon.com/images/M/MV5BNTczMzk1MjU1MV5BMl5BanBnXkFtZTcwNDk2MzAyMg@@._V1_UY256_CR2,0,172,256_AL_.jpg',
@@ -67,6 +68,7 @@ async function main() {
             password: await encryptPass('john123'),
             type: 'Citizen',
             emailAddress: faker.internet.email(),
+            status: 1,
             user: {
                 create: {
                     avatarUrl: 'https://images.pexels.com/photos/1681010/pexels-photo-1681010.jpeg?auto=compress&cs=tinysrgb&crop=faces&fit=crop&h=200&w=200',

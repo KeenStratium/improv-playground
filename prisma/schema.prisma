@@ -25,10 +25,10 @@ model Account {
 model User {
   id           Int            @id @default(autoincrement())
   account      Account?       @relation("UserHasAccount")
-  createdAt    DateTime       @default(now())
+  createdAt    DateTime?      @default(now())
   post         Post[]         @relation("UserAuthorPost")
   postAnalytic PostAnalytic[]
-  avatarUrl    String
+  avatarUrl    String?
   defaultCity  City           @relation(fields: [cityId], references: [id])
   cityId       Int
   favCities    City[]         @relation("UserFavCities")

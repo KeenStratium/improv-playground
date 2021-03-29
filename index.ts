@@ -1,5 +1,5 @@
 import { PrismaClient } from "@prisma/client"
-import { ApolloServer } from 'apollo-server'
+import { ApolloServer, AuthenticationError } from 'apollo-server'
 import { GraphQLJSON } from 'graphql-scalars'
 import * as dotenv from 'dotenv'
 import jwt from 'jsonwebtoken'
@@ -48,7 +48,6 @@ const typeDefs = `#graphql
     "Returns a report type such as 'Lighting Issues', 'Road Development Work', etc..." 
     type:          ValueMeta
     city:          City
-    cityId:        Int
     comments:      [Comment]
   }
 
@@ -72,6 +71,7 @@ const typeDefs = `#graphql
     postAnalytic:  [PostAnalytic]
     avatarUrl:     String
     defaultCity:   City
+    cityId:        Int
     firstName:     String
     lastName:      String
     birthdate:     String
@@ -105,7 +105,6 @@ const typeDefs = `#graphql
 
   type Account {
     username: String
-    password: String
     emailAddress: String
     """
     One of the f.f.:
@@ -141,6 +140,15 @@ const typeDefs = `#graphql
       username: String!
       password: String!
     ): AuthPayload!
+    signUp(
+      username: String! 
+      password: String!
+      emailAddress: String
+      birthdate: String!
+      firstName: String
+      lastName: String
+      isAnonymous: Boolean!
+    ): AuthPayload
   }
 
   type Query {
@@ -167,6 +175,8 @@ const resolvers = {
         include: {
           user: true,
           type: true,
+          city: true,
+          mediaUpload: true,
           comments: {
             include: {
               childComments: {
@@ -287,7 +297,7 @@ const resolvers = {
       const valid = await bcrypt.compare(args.password, account.password)
 
       if (!valid) {
-        throw new Error('Invalid account credentials, please try again.')
+        throw new AuthenticationError('Invalid account credentials, please try again.');
       }
 
       const user = await ctx.prisma.user.findUnique({
@@ -300,7 +310,57 @@ const resolvers = {
         throw new Error('User info not found.')
       }
 
-      const token = jwt.sign({ userId: account.id }, jwtSecret)
+      const token = jwt.sign({ userId: user.id }, jwtSecret)
+
+      return {
+        user: user,
+        token: token
+      }
+    },
+    signUp: async (parent: any, args: any, ctx: any, info: any) => {
+      let displayName = null
+
+      if (args.isAnonymous) {
+        displayName = args.username
+      } else {
+        displayName = `${args.firstName} ${args.lastName}`
+      }
+
+      const account = await prisma.account.create({
+        data: {
+          username: args.username,
+          password: await bcrypt.hash(args.password, 10),
+          emailAddress: args.emailAddress,
+          type: 'Citizen',
+          status: 1,
+          user: {
+            create: {
+              firstName: 'firstName' in args ? args.firstName : null,
+              lastName: 'lastName' in args ? args.lastName : null,
+              displayName: displayName,
+              isAnonymous: args.isAnonymous,
+              birthdate: args.birthdate,
+              cityId: 1
+            }
+          }
+        }
+      })
+
+      if (!account) {
+        throw new Error('Something went wrong creating account, please try again.')
+      }
+
+      const user = await prisma.user.findUnique({
+        where: {
+          id: account.userId!
+        }
+      })
+
+      if (!user) {
+        throw new Error('Something went wrong creating user info, please try again.')
+      }
+
+      const token = jwt.sign({ userId: user.id }, jwtSecret)
 
       return {
         user: user,
@@ -316,13 +376,25 @@ const server = new ApolloServer({
   context: ({ req }) => {
     const token = req.headers.authorization || '';
 
-    console.log('token', token);
+    const user = getAuthenticatedUser(token)
+
+    if (!user) {
+      throw new AuthenticationError('You must be logged in to perform this action.');
+    }
 
     return {
       prisma
     }
   }
 });
+
+function getAuthenticatedUser(token: String) {
+  if (token == '') {
+    console.log('no token');
+  }
+
+  return null
+}
 
 
 server.listen({ port: 4000 }).then((url) => {
