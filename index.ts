@@ -1,6 +1,10 @@
 import { PrismaClient } from "@prisma/client"
 import { ApolloServer } from 'apollo-server'
-import { GraphQLJSON } from 'graphql-scalars';
+import { GraphQLJSON } from 'graphql-scalars'
+import * as dotenv from 'dotenv'
+import jwt from 'jsonwebtoken'
+const bcrypt = require('bcryptjs');
+const jwtSecret: string = process.env.APP_SECRET!
 
 const prisma = new PrismaClient();
 
@@ -51,7 +55,6 @@ const typeDefs = `#graphql
     - '0: draft'
     """
     state:         Int    
-    "Either 'Post' or 'Comment'"
     reference:     Post
     referencedBy:  [Post]  
     reactionCount: JSON
@@ -116,17 +119,14 @@ const typeDefs = `#graphql
     value:     String
   }
 
-  type Mutation {
-    # createProfile(
-    #   userId: Int
-    #   name: String
-    # ): Profile!
-    
-    # createUser(
-    #   karmaPoints: Int
-    #   profile: ProfileCreateInput
-    # ): User!
+  type Account {
+    username: String,
+    password: String,
+    emailAddress: String,
+    user: User
+  }
 
+  type Mutation {
     createPost(
       userId: Int,
       title: String!,
@@ -139,17 +139,25 @@ const typeDefs = `#graphql
       userId: Int!,
       postId: Int,
       commentId: Int
-    ): Comment!
+    ): Comment!,
+    userLogin(
+      username: String!,
+      password: String!
+    ): AuthPayload!
   }
 
   type Query {
     allUsers: [User!]!,
     allPosts: [Post!]!,
-    options: [ValueMeta!]!
+    options: [ValueMeta!]!,
+    user(id: Int!): User!,
+    post(id: Int!): Post,
+    account(username: String!): Account
   }
 
   type AuthPayload {
-    hello: String!
+    user: User,
+    token: String!
   }
 `;
 
@@ -179,6 +187,20 @@ const resolvers = {
     },
     options: () => {
       return prisma.valueMeta.findMany({})
+    },
+    user: (parent: any, args: any, ctx: any, info: any) => {
+      return prisma.user.findUnique({
+        where: {
+          id: args.id
+        }
+      })
+    },
+    post: (parent: any, args: any, ctx: any, info: any) => {
+      return prisma.post.findUnique({
+        where: {
+          id: args.id
+        }
+      })
     }
   },
   Mutation: {
@@ -253,6 +275,40 @@ const resolvers = {
       return ctx.prisma.comment.create({
         data
       })
+    },
+    userLogin: async (parent: any, args: any, ctx: any, info: any) => {
+      const account = await ctx.prisma.account.findUnique({
+        where: {
+          username: args.username
+        }
+      })
+
+      if (!account) {
+        throw new Error('Account not found, please try again.')
+      }
+
+      const valid = await bcrypt.compare(args.password, account.password)
+
+      if (!valid) {
+        throw new Error('Invalid account credentials, please try again.')
+      }
+
+      const user = await ctx.prisma.user.findUnique({
+        where: {
+          id: account.userId
+        }
+      })
+
+      if (!user) {
+        throw new Error('User info not found.')
+      }
+
+      const token = jwt.sign({ userId: account.id }, jwtSecret)
+
+      return {
+        user: user,
+        token: token
+      }
     }
   }
 };
@@ -260,12 +316,20 @@ const resolvers = {
 const server = new ApolloServer({
   resolvers,
   typeDefs,
-  context: {
-    prisma
+  context: ({ req }) => {
+    const token = req.headers.authorization || '';
+
+    console.log('token', token);
+
+    return {
+      prisma
+    }
   }
 });
 
 
 server.listen({ port: 4000 }).then((url) => {
   console.log(`🚀  Server ready at port ${url.port}`);
+
+  dotenv.config();
 });

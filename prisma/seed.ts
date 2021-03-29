@@ -1,5 +1,6 @@
 import { PrismaClient } from '@prisma/client'
 import faker = require('faker')
+const bcrypt = require('bcryptjs')
 const prisma = new PrismaClient()
 
 const avatarUrls = [
@@ -44,7 +45,7 @@ async function main() {
     const improvAcc = await prisma.account.create({
         data: {
             username: 'improv',
-            password: 'improv123',
+            password: await encryptPass('improv123'),
             type: 'Citizen',
             emailAddress: faker.internet.email(),
             user: {
@@ -63,7 +64,7 @@ async function main() {
     const johnAcc = await prisma.account.create({
         data: {
             username: 'john',
-            password: 'john123',
+            password: await encryptPass('john123'),
             type: 'Citizen',
             emailAddress: faker.internet.email(),
             user: {
@@ -302,7 +303,14 @@ function getReactionCount() {
     }
 }
 
+async function encryptPass(password: String) {
+    return await bcrypt.hash(password, 10)
+}
+
 main()
+    .then(() => {
+        console.log('\n✅ All data has been sucessfully seeded.');
+    })
     .catch(e => {
         console.error(e)
         process.exit(1)

@@ -13,9 +13,9 @@ generator client {
 
 model Account {
   id           Int    @id @default(autoincrement())
-  username     String
+  username     String @unique
   password     String
-  emailAddress String @default("")
+  emailAddress String @unique @default("")
   type         String
   status       Int    @default(0)
   userId       Int?
