@@ -1,10 +1,12 @@
 import { PrismaClient } from "@prisma/client"
-import { ApolloServer, AuthenticationError } from 'apollo-server'
+import { ApolloServer, AuthenticationError, makeExecutableSchema } from 'apollo-server'
+import { rule, shield, and, or, not } from 'graphql-shield'
 import { GraphQLJSON } from 'graphql-scalars'
 import * as dotenv from 'dotenv'
 import jwt from 'jsonwebtoken'
 const bcrypt = require('bcryptjs');
 const jwtSecret: string = process.env.APP_SECRET!
+import { applyMiddleware } from "graphql-middleware";
 
 const prisma = new PrismaClient();
 
@@ -167,6 +169,18 @@ const typeDefs = `#graphql
 `;
 
 
+function generateToken(user: any, account: any) {
+  return jwt.sign({
+    user: {
+      userId: user.id,
+      role: account.type,
+    }
+  },
+    jwtSecret, {
+    'expiresIn': '1m'
+  })
+}
+
 const resolvers = {
   JSON: GraphQLJSON,
   Query: {
@@ -310,7 +324,7 @@ const resolvers = {
         throw new Error('User info not found.')
       }
 
-      const token = jwt.sign({ userId: user.id }, jwtSecret)
+      const token = generateToken(user, account)
 
       return {
         user: user,
@@ -360,7 +374,7 @@ const resolvers = {
         throw new Error('Something went wrong creating user info, please try again.')
       }
 
-      const token = jwt.sign({ userId: user.id }, jwtSecret)
+      const token = generateToken(user, account)
 
       return {
         user: user,
@@ -370,36 +384,92 @@ const resolvers = {
   }
 };
 
+const isAuthenticated = rule({ cache: 'contextual' })(
+  async (parent, args, ctx, info) => {
+    console.log('is auth', ctx.user);
+
+    return ctx.user !== null && ctx.user !== undefined
+  },
+)
+
+const isCitizen = rule({ cache: 'contextual' })(
+  async (parent, args, ctx, info) => {
+    return ctx.user.role === 'Citizen'
+  },
+)
+
+const isModerator = rule({ cache: 'contextual' })(
+  async (parent, args, ctx, info) => {
+    return ctx.user.role === 'Moderator'
+  },
+)
+
+const permissions = shield({
+  Query: {
+    allPosts: and(isAuthenticated, isModerator),
+    allUsers: isAuthenticated,
+    options: isAuthenticated,
+    user: isAuthenticated,
+    post: isAuthenticated
+  },
+  Mutation: {
+    userLogin: not(isAuthenticated),
+    signUp: not(isAuthenticated),
+    createPost: isAuthenticated,
+    createComment: isAuthenticated
+  },
+  // Fruit: isAuthenticated,
+})
+
+const schema = applyMiddleware(
+  makeExecutableSchema({
+    typeDefs,
+    resolvers
+  }),
+  permissions
+)
+
 const server = new ApolloServer({
-  resolvers,
-  typeDefs,
+  schema: schema,
   context: ({ req }) => {
     const token = req.headers.authorization || '';
     const refreshToken = req.headers["x-refresh-token"];
     const accessToken = req.headers["x-access-token"];
 
-    if (!accessToken && !refreshToken) return { prisma };
+    // if (!accessToken && !refreshToken) return { prisma };
 
     const user = getAuthenticatedUser(token)
 
-    if (!user) {
-      throw new AuthenticationError('You must be logged in to perform this action.');
+    if (user) {
+      return { prisma, user }
+    } else {
+      console.log('no user')
+      // throw new AuthenticationError('You must be logged in to perform this action.');
     }
 
-    return {
-      prisma
-    }
+    return { prisma }
   }
 });
 
-function getAuthenticatedUser(token: String) {
-  if (token == '') {
-    console.log('no token');
+function getAuthenticatedUser(tokenStr: String) {
+  if (tokenStr == '') {
+    return null;
+  }
+  const tokenArr = tokenStr.split(' ')
+
+  if (tokenArr.length > 1 && tokenArr[0].toLowerCase() === 'bearer') {
+    const token = tokenArr[1]
+    const decoded: Object = jwt.verify(token, jwtSecret)
+
+    if ('user' in decoded) {
+      const user = decoded['user']
+
+      return user
+    }
   }
 
   return null
 }
-
 
 server.listen({ port: 4000 }).then((url) => {
   console.log(`🚀  Server ready at port ${url.port}`);
