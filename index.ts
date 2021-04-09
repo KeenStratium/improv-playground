@@ -380,7 +380,7 @@ const resolvers = {
         user: user,
         token: token
       }
-    }
+    },
   }
 };
 
@@ -406,7 +406,7 @@ const isModerator = rule({ cache: 'contextual' })(
 
 const permissions = shield({
   Query: {
-    allPosts: and(isAuthenticated, isModerator),
+    allPosts: and(isAuthenticated, isCitizen),
     allUsers: isAuthenticated,
     options: isAuthenticated,
     user: isAuthenticated,
