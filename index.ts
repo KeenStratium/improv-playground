@@ -69,6 +69,7 @@ const typeDefs = `#graphql
   type User {
     id:            Int
     createdAt:     String
+    account:       Account
     posts:         [Post]
     postAnalytic:  [PostAnalytic]
     avatarUrl:     String
@@ -151,6 +152,9 @@ const typeDefs = `#graphql
       lastName: String
       isAnonymous: Boolean!
     ): AuthPayload
+    refreshToken(
+      userId: Int!
+    ): AuthPayload!
   }
 
   type Query {
@@ -165,11 +169,12 @@ const typeDefs = `#graphql
   type AuthPayload {
     user: User
     token: String!
+    refreshToken: String!
   }
 `;
 
 
-function generateToken(user: any, account: any) {
+function generateAccessToken(user: any, account: any) {
   return jwt.sign({
     user: {
       userId: user.id,
@@ -177,7 +182,21 @@ function generateToken(user: any, account: any) {
     }
   },
     jwtSecret, {
-    'expiresIn': '1m'
+    'expiresIn': '30m'
+  })
+}
+
+function generateRefreshToken(accessToken: String, user: any) {
+  const tokenParts = accessToken.split('.')
+
+  return jwt.sign({
+    accessTokenTrail: tokenParts[tokenParts.length - 1],
+    user: {
+      userId: user.id,
+    }
+  },
+    jwtSecret, {
+    'expiresIn': '7d'
   })
 }
 
@@ -324,11 +343,13 @@ const resolvers = {
         throw new Error('User info not found.')
       }
 
-      const token = generateToken(user, account)
+      const token = generateAccessToken(user, account)
+      const refreshToken = generateRefreshToken(token, user)
 
       return {
-        user: user,
-        token: token
+        user,
+        token,
+        refreshToken
       }
     },
     signUp: async (parent: any, args: any, ctx: any, info: any) => {
@@ -374,21 +395,45 @@ const resolvers = {
         throw new Error('Something went wrong creating user info, please try again.')
       }
 
-      const token = generateToken(user, account)
+      const token = generateAccessToken(user, account)
+      const refreshToken = generateRefreshToken(token, user)
 
       return {
-        user: user,
-        token: token
+        user,
+        token,
+        refreshToken
       }
     },
+    refreshToken: async (parent: any, args: any, ctx: any, info: any) => {
+      const isVerified = verifyRefreshToken(ctx.refreshToken, args.userId, ctx.accessToken)
+
+      if (isVerified) {
+        const user = await ctx.prisma.user.findUnique({
+          where: {
+            id: args.userId
+          },
+          include: {
+            account: true
+          }
+        })
+        const token = generateAccessToken(user, user.account)
+        const refreshToken = generateRefreshToken(token, user)
+
+        return {
+          user: user,
+          token: token,
+          refreshToken: refreshToken
+        }
+      } else {
+        return new AuthenticationError('Refresh token expired. Please login again.')
+      }
+    }
   }
 };
 
 const isAuthenticated = rule({ cache: 'contextual' })(
   async (parent, args, ctx, info) => {
-    console.log('is auth', ctx.user);
-
-    return ctx.user !== null && ctx.user !== undefined
+    return ctx.user !== null && ctx.user !== undefined && !ctx.isExpired
   },
 )
 
@@ -404,6 +449,18 @@ const isModerator = rule({ cache: 'contextual' })(
   },
 )
 
+const hasRefreshToken = rule({ cache: 'contextual' })(
+  async (parent, args, ctx, info) => {
+    return ctx.refreshToken !== null && ctx.refreshToken !== undefined
+  },
+)
+
+const isTokenExpired = rule({ cache: 'contextual' })(
+  async (parent, args, ctx, info) => {
+    return ctx.refreshToken !== undefined && ctx.isExpired
+  },
+)
+
 const permissions = shield({
   Query: {
     allPosts: and(isAuthenticated, isCitizen),
@@ -416,9 +473,9 @@ const permissions = shield({
     userLogin: not(isAuthenticated),
     signUp: not(isAuthenticated),
     createPost: isAuthenticated,
-    createComment: isAuthenticated
+    createComment: isAuthenticated,
+    refreshToken: and(hasRefreshToken, isTokenExpired, not(isAuthenticated))
   },
-  // Fruit: isAuthenticated,
 })
 
 const schema = applyMiddleware(
@@ -434,24 +491,59 @@ const server = new ApolloServer({
   context: ({ req }) => {
     const token = req.headers.authorization || '';
     const refreshToken = req.headers["x-refresh-token"];
-    const accessToken = req.headers["x-access-token"];
+    const decoded: any = decodeToken(token) || {}
+    let ctx: any = { prisma }
+    let decodedToken = null;
 
-    // if (!accessToken && !refreshToken) return { prisma };
+    if ('err' in decoded && decoded['err'] !== null && decoded['err'] !== undefined) {
+      const tokenStatus: Number = getTokenStatus(decoded['err'])
 
-    const user = getAuthenticatedUser(token)
-
-    if (user) {
-      return { prisma, user }
-    } else {
-      console.log('no user')
-      // throw new AuthenticationError('You must be logged in to perform this action.');
+      if (tokenStatus === 1) {
+        ctx['isExpired'] = true
+      }
+    } else if (decoded['decoded'] !== undefined) {
+      decodedToken = decoded['decoded']
     }
 
-    return { prisma }
+    const user = getAuthenticatedUser(decodedToken)
+
+    if (refreshToken !== undefined) {
+      ctx['refreshToken'] = refreshToken
+      ctx['accessToken'] = decoded['token']
+    }
+
+    if (user) {
+      ctx['user'] = user
+      ctx['isExpired'] = false
+    }
+
+    return ctx
   }
 });
 
-function getAuthenticatedUser(tokenStr: String) {
+function getTokenStatus(err: any): Number {
+  if (err) {
+    const errName = err['name']
+
+    if (errName == 'TokenExpiredError') {
+      return 1
+    }
+  }
+
+  return 0
+}
+
+function getAuthenticatedUser(decoded: any) {
+  if (decoded !== undefined && decoded !== null && 'user' in decoded) {
+    const user = decoded['user']
+
+    return user
+  }
+
+  return null
+}
+
+function decodeToken(tokenStr: String) {
   if (tokenStr == '') {
     return null;
   }
@@ -459,16 +551,43 @@ function getAuthenticatedUser(tokenStr: String) {
 
   if (tokenArr.length > 1 && tokenArr[0].toLowerCase() === 'bearer') {
     const token = tokenArr[1]
-    const decoded: Object = jwt.verify(token, jwtSecret)
 
-    if ('user' in decoded) {
-      const user = decoded['user']
-
-      return user
-    }
+    return jwt.verify(token, jwtSecret, (err: any, decoded: any) => {
+      return { err, decoded, token }
+    })
   }
 
   return null
+}
+
+function verifyRefreshToken(token: any, userId: any, accessToken: any): any {
+  return jwt.verify(token, jwtSecret, (err: any, decoded: any) => {
+    if (err === undefined) {
+      const errName = err['name']
+
+      if (errName == 'TokenExpiredError') {
+        return false
+      }
+    } else {
+      const user = decoded['user']
+
+      if (decoded !== undefined && user !== undefined) {
+        if (user['userId'] !== undefined && user['userId'] !== null) {
+          const tokenUserId = user['userId']
+          const accessTokenTrail = decoded['accessTokenTrail']
+          const tokenParts = accessToken.split('.')
+
+          if (tokenParts.length === 3) {
+            return tokenUserId === userId && tokenParts[2] === accessTokenTrail
+          }
+        }
+      }
+
+      return false
+    }
+
+    return false
+  })
 }
 
 server.listen({ port: 4000 }).then((url) => {
