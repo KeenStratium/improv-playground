@@ -181,9 +181,10 @@ function generateAccessToken(user: any, account: any) {
       role: account.type,
     }
   },
-    jwtSecret, {
-    'expiresIn': '30m'
-  })
+    jwtSecret,
+    {
+      'expiresIn': '30m'
+    })
 }
 
 function generateRefreshToken(accessToken: String, user: any) {
