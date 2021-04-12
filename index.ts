@@ -6,6 +6,8 @@ import * as dotenv from 'dotenv'
 import jwt from 'jsonwebtoken'
 const bcrypt = require('bcryptjs');
 const jwtSecret: string = process.env.APP_SECRET!
+const accessTokenExpires: any = parseInt(process.env.ACCESS_TOKEN_EXPIRES!)
+const refreshTokenExpires: any = parseInt(process.env.REFRESH_TOKEN_EXPIRES!)
 import { applyMiddleware } from "graphql-middleware";
 
 const prisma = new PrismaClient();
@@ -168,8 +170,10 @@ const typeDefs = `#graphql
 
   type AuthPayload {
     user: User
-    token: String!
+    token: String!  
     refreshToken: String!
+    expiresIn: Int,
+    tokenType: String
   }
 `;
 
@@ -183,7 +187,7 @@ function generateAccessToken(user: any, account: any) {
   },
     jwtSecret,
     {
-      'expiresIn': '30m'
+      'expiresIn': accessTokenExpires
     })
 }
 
@@ -197,7 +201,7 @@ function generateRefreshToken(accessToken: String, user: any) {
     }
   },
     jwtSecret, {
-    'expiresIn': '7d'
+    'expiresIn': refreshTokenExpires
   })
 }
 
@@ -350,6 +354,8 @@ const resolvers = {
       return {
         user,
         token,
+        tokenType: 'bearer',
+        expiresIn: accessTokenExpires,
         refreshToken
       }
     },
@@ -402,6 +408,8 @@ const resolvers = {
       return {
         user,
         token,
+        tokenType: 'bearer',
+        expiresIn: accessTokenExpires,
         refreshToken
       }
     },
@@ -423,6 +431,8 @@ const resolvers = {
         return {
           user: user,
           token: token,
+          tokenType: 'bearer',
+          expiresIn: accessTokenExpires,
           refreshToken: refreshToken
         }
       } else {
@@ -475,7 +485,7 @@ const permissions = shield({
     signUp: not(isAuthenticated),
     createPost: isAuthenticated,
     createComment: isAuthenticated,
-    refreshToken: and(hasRefreshToken, isTokenExpired, not(isAuthenticated))
+    refreshToken: hasRefreshToken
   },
 })
 

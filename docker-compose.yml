@@ -12,7 +12,7 @@ services:
       - "5432:5432"
   backend:
       build: .
-      command: npm run dev:ts
+      command: npm run start
       volumes:
         - .:/usr/app/
         - /usr/app/node_modules
