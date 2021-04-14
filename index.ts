@@ -165,7 +165,7 @@ const typeDefs = `#graphql
     options: [ValueMeta!]!
     user(id: Int!): User!
     post(id: Int!): Post
-    account(username: String!): Account
+    searchUser(search: String): [User]
   }
 
   type AuthPayload {
@@ -244,6 +244,32 @@ const resolvers = {
       return prisma.post.findUnique({
         where: {
           id: args.id
+        }
+      })
+    },
+    searchUser: (parent: any, args: any, ctx: any, info: any) => {
+      return prisma.user.findMany({
+        where: {
+          OR: [
+            {
+              firstName: {
+                contains: args.search,
+                mode: 'insensitive'
+              }
+            },
+            {
+              lastName: {
+                contains: args.search,
+                mode: 'insensitive'
+              }
+            },
+            {
+              displayName: {
+                contains: args.search,
+                mode: 'insensitive'
+              }
+            },
+          ]
         }
       })
     }
